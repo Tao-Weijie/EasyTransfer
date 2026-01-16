@@ -9,7 +9,7 @@ bl_info = {
 }
 
 import bpy
-from .easycopy_blender import BlenderCopy, BlenderPaste
+from .easy_transfer_blender import BlenderCopy, BlenderPaste
 
 addon_keymaps = []
 
@@ -127,10 +127,7 @@ def register():
         
     bpy.types.VIEW3D_MT_object_context_menu.append(menu_func)
     
-    # Initialize Keymaps directly
     try:
-        # Note: When splitting files, accessing preferences via __name__ might need adjustment if __name__ is package name.
-        # But usually in __init__.py __name__ is the package name.
         addon_name = __name__ 
         if addon_name in bpy.context.preferences.addons:
             prefs = bpy.context.preferences.addons[addon_name].preferences
