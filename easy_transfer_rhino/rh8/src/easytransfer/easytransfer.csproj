@@ -4,8 +4,8 @@
     <TargetFramework>net48</TargetFramework>
     <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
     <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
-    <AssemblyName>easycopy_rhino</AssemblyName>
-    <AssemblyVersion>0.1.1.9507</AssemblyVersion>
+    <AssemblyName>easytransfer</AssemblyName>
+    <AssemblyVersion>0.1.2.9523</AssemblyVersion>
   </PropertyGroup>
 
   <ItemGroup>

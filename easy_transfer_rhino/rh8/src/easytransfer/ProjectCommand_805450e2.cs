@@ -6,13 +6,13 @@ using Rhino.Commands;
 namespace RhinoCodePlatform.Rhino3D.Projects.Plugin
 {
   [CommandStyle(Rhino.Commands.Style.ScriptRunner)]
-  public class ProjectCommand_ef36f176 : Command
+  public class ProjectCommand_805450e2 : Command
   {
-    public Guid CommandId { get; } = new Guid("ef36f176-6f7c-4ba0-93af-5cf0c779213f");
+    public Guid CommandId { get; } = new Guid("805450e2-e5f2-4a2a-a150-07d8c48a86c1");
 
-    public ProjectCommand_ef36f176() { Instance = this; }
+    public ProjectCommand_805450e2() { Instance = this; }
 
-    public static ProjectCommand_ef36f176 Instance { get; private set; }
+    public static ProjectCommand_805450e2 Instance { get; private set; }
 
     public override string EnglishName => "EasyCopy";
 

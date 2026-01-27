@@ -9,7 +9,7 @@ bl_info = {
 }
 
 import bpy
-from .easy_transfer_blender import BlenderCopy, BlenderPaste
+from .easytransfer_blender import BlenderCopy, BlenderPaste
 
 addon_keymaps = []
 
