@@ -1,5 +1,3 @@
-# Untitled
-
 # EasyTransfer Tool
 
 **EasyTransfer** is a plugin designed to rapidly copy and paste geometric objects between different 3D software. It aims to achieve a seamless workflow between modeling applications without the need for manual import and export steps. The plugin currently uses `.usd`(Universal Scene Description) as the standard medium, ensuring that the complete data structure of objects is preserved as much as possible during transfer.
@@ -16,7 +14,7 @@
 - **Rhino:** Since Rhino 8.0 does not yet support native methods for reading/writing `.usd` files via API, this plugin requires the **Pixar USD Library**.
     - *Note: This library is automatically downloaded and installed when you install the plugin.*
     
-    在**rhino**端，8.0版本尚不支持对于`.usd`的读取和写入方法，因此该插件需要安装Pixar开发的USD文件标准库(默认在安装时自动下载）。
+    在**rhino**端，8.0版本尚不支持对于`.usd`的读取和写入方法，因此该插件需要安装Pixar开发的USD文件标准库(默认在安装时自动下载)
     
 
 ## 📦 Version History
