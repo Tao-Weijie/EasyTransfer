@@ -1,15 +1,15 @@
 bl_info = {
-    "name": "EasyTransfer",
+    "name": "EasyTransfer USD",
     "author": "Weijie Tao",
     "version": (0, 2, 0),
     "blender": (4, 5, 0),
-    "location": "View3D > Rightclick Menu > EasyTransfer",
-    "description": "Transfer geometry between different 3D software via JSON",
+    "location": "View3D > Rightclick Menu > EasyTransfer USD",
+    "description": "Transfer geometry between different 3D software via USDA",
     "category": "Import-Export",
 }
 
 import bpy
-from .easytransfer_blender import BlenderCopy, BlenderPaste
+from .easytransfer_blender import EasyCopy, EasyPaste
 
 addon_keymaps = []
 
@@ -24,7 +24,7 @@ def update_keymaps(self, context):
     if not km:
         km = kc.keymaps.new(name='3D View', space_type='VIEW_3D')
 
-    target_operators = {BlenderCopy.bl_idname, BlenderPaste.bl_idname}
+    target_operators = {EasyCopy.bl_idname, EasyPaste.bl_idname}
     
     for i in range(len(km.keymap_items) - 1, -1, -1):
         kmi = km.keymap_items[i]
@@ -35,7 +35,7 @@ def update_keymaps(self, context):
 
     if self.copy_key:
         kmi = km.keymap_items.new(
-            BlenderCopy.bl_idname, 
+            EasyCopy.bl_idname, 
             self.copy_key, 
             'PRESS', 
             ctrl=self.copy_ctrl, 
@@ -47,7 +47,7 @@ def update_keymaps(self, context):
     
     if self.paste_key:
         kmi = km.keymap_items.new(
-            BlenderPaste.bl_idname, 
+            EasyPaste.bl_idname, 
             self.paste_key, 
             'PRESS', 
             ctrl=self.paste_ctrl, 
@@ -58,7 +58,7 @@ def update_keymaps(self, context):
         addon_keymaps.append((km, kmi))
 
 
-class EasyCopyPreferences(bpy.types.AddonPreferences):
+class EasytransferPreferences(bpy.types.AddonPreferences):
     bl_idname = __name__
 
     # Copy Settings
@@ -78,32 +78,31 @@ class EasyCopyPreferences(bpy.types.AddonPreferences):
     def draw(self, context):
         layout = self.layout
         
-        # Copy UI
-        box_copy = layout.box()
-        box_copy.label(text="Easy Copy Shortcut", icon='COPYDOWN')
+        main_box = layout.box()
+        main_row = main_box.row(align=False)
         
-        split_copy = box_copy.split(factor=0.2)
+        col_left = main_row.column()
+        col_left.label(text="Easy Copy Shortcut", icon='COPYDOWN')
+        split_copy = col_left.split(factor=0.2) 
+        
         col_key_c = split_copy.column()
         col_mods_c = split_copy.column()
         
         col_key_c.prop(self, "copy_key", text="")
-        
         row_mods_c = col_mods_c.row(align=True)
         row_mods_c.prop(self, "copy_ctrl", toggle=True)
         row_mods_c.prop(self, "copy_shift", toggle=True)
         row_mods_c.prop(self, "copy_alt", toggle=True)
         row_mods_c.prop(self, "copy_os", toggle=True)
 
-        # Paste UI
-        box_paste = layout.box()
-        box_paste.label(text="Easy Paste Shortcut", icon='PASTEDOWN')
+        col_right = main_row.column()
+        col_right.label(text="Easy Paste Shortcut", icon='PASTEDOWN')
+        split_paste = col_right.split(factor=0.2)
         
-        split_paste = box_paste.split(factor=0.2)
         col_key_p = split_paste.column()
         col_mods_p = split_paste.column()
         
         col_key_p.prop(self, "paste_key", text="")
-
         row_mods_p = col_mods_p.row(align=True)
         row_mods_p.prop(self, "paste_ctrl", toggle=True)
         row_mods_p.prop(self, "paste_shift", toggle=True)
@@ -112,13 +111,13 @@ class EasyCopyPreferences(bpy.types.AddonPreferences):
 
 def menu_func(self, context):
     self.layout.separator()
-    self.layout.operator(BlenderCopy.bl_idname, text="Easy Copy", icon='COPYDOWN')
-    self.layout.operator(BlenderPaste.bl_idname, text="Easy Paste", icon='PASTEDOWN')
+    self.layout.operator(EasyCopy.bl_idname, text="Easy Copy", icon='COPYDOWN')
+    self.layout.operator(EasyPaste.bl_idname, text="Easy Paste", icon='PASTEDOWN')
 
 classes = (
-    EasyCopyPreferences,
-    BlenderCopy,
-    BlenderPaste,
+    EasytransferPreferences,
+    EasyCopy,
+    EasyPaste,
 )
 
 def register():
@@ -133,7 +132,7 @@ def register():
             prefs = bpy.context.preferences.addons[addon_name].preferences
             update_keymaps(prefs, bpy.context)
     except Exception as e:
-        print(f"EasyCopy: Failed to register keymaps on startup: {e}")
+        print(f"EasyTransfer: Failed to register keymaps on startup: {e}")
 
 
 def unregister():
