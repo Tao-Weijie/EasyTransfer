@@ -5,6 +5,7 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
 
 # 2. Allow Release
 permissions:
