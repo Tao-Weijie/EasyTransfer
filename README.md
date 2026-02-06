@@ -30,7 +30,7 @@ rhino 8.0
 
 blender 4.5  or higher
 
-### 📐 Supported Geometry
+## 📐 Supported Geometry
 
 | **Type** | **Description** | **Notes** |
 | --- | --- | --- |
