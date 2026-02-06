@@ -1,0 +1,59 @@
+name: Auto Package & Release
+
+# 1. Trigger: Only when pushing a tag starting with 'v' (e.g., v0.1.0)
+on:
+  push:
+    tags:
+      - "v*"
+
+# 2. Allow Release
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build and Release
+    runs-on: ubuntu-latest 
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      # --- blender ---
+      - name: Package Blender Addon
+        run: |
+          BLENDER_ZIP="EasyTransfer_blender_${{ github.ref_name }}.zip"
+          
+          zip -r $BLENDER_ZIP EasyTransfer_blender \
+            -x "*.git*" \
+            -x "*.DS_Store" \
+            -x "*__pycache__*" \
+            -x "*.vscode*"
+            
+          echo "BLENDER_FILENAME=$BLENDER_ZIP" >> $GITHUB_ENV
+
+      # --- rhino ---
+      - name: Package Rhino Plugin
+        run: |
+          RHINO_ZIP="EasyTransfer_rhino_${{ github.ref_name }}.zip"
+          
+          zip -r $RHINO_ZIP EasyTransfer_rhino \
+            -x "*.git*" \
+            -x "*.DS_Store" \
+            -x "*__pycache__*" \
+            -x "*.vscode*"
+            
+          echo "RHINO_FILENAME=$RHINO_ZIP" >> $GITHUB_ENV
+
+      # --- release ---
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          name: Release ${{ github.ref_name }}
+          draft: false    
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            ${{ env.BLENDER_FILENAME }}
+            ${{ env.RHINO_FILENAME }}

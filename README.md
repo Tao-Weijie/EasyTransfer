@@ -38,7 +38,7 @@ blender 4.5  or higher
 | **Subdivided mesh** | Same basic structure as Mesh but includes **Crease** information and **subdivision** data. 多边形网格细分物体，基础结构结构与mesh相同，除此之外还包含折痕信息和细分 | In Blender, this applies a Subdivision Surface modifier. In Rhino, it is converted to a native **SubD** object. 在blender，subD会在mesh的基础上添加细分修改器，在rhino端会被转换为subD |
 | **Point cloud** | A collection of 3D points containing position, color, and normal vectors.三维点集合，包含点位置，颜色和向量 | Blender also supports point **Radius**. 在blender端还支持点的半径 |
 
-### 🚀 Installation
+## 🚀 Installation
 
 - Rhino 8
     
