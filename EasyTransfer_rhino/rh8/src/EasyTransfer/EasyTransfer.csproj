@@ -5,7 +5,7 @@
     <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
     <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
     <AssemblyName>EasyTransfer</AssemblyName>
-    <AssemblyVersion>0.1.25444.9534</AssemblyVersion>
+    <AssemblyVersion>0.1.33670.9534</AssemblyVersion>
   </PropertyGroup>
 
   <ItemGroup>

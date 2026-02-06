@@ -2,7 +2,9 @@
 # r: usd-core
 import Rhino
 import os
-import System
+from System.Drawing import Color
+from System import Guid
+from Eto.Forms import Clipboard
 from pxr import Usd, UsdGeom, Gf, Sdf
 
 
@@ -320,7 +322,7 @@ class Converter:
                  r = int(max(0, min(1, c[0])) * 255)
                  g = int(max(0, min(1, c[1])) * 255)
                  b = int(max(0, min(1, c[2])) * 255)
-                 rh_color = System.Drawing.Color.FromArgb(r, g, b)
+                 rh_color = Color.FromArgb(r, g, b)
                  
                  n = normals_attr[i]
                  rh_normal = Rhino.Geometry.Vector3d(n[0], n[1], n[2])
@@ -339,7 +341,7 @@ class Converter:
                  r = int(max(0, min(1, c[0])) * 255)
                  g = int(max(0, min(1, c[1])) * 255)
                  b = int(max(0, min(1, c[2])) * 255)
-                 rh_color = System.Drawing.Color.FromArgb(r, g, b)
+                 rh_color = Color.FromArgb(r, g, b)
                  
                  rh_pc.Add(rh_points[i], rh_color)
         else:
@@ -411,7 +413,7 @@ class Execute:
         print(f"Exported {count} objects to {file_path}")
         
         try:
-            Rhino.UI.Clipboard.SetText(file_path)
+            Clipboard.Instance.Text = file_path
         except Exception as e:
             print("Failed to set clipboard:", e)
 
@@ -420,11 +422,12 @@ class Execute:
         # 1. Get Path
         file_path = None
         try:
-            clip_text = Rhino.UI.Clipboard.GetText()
-            if clip_text:
-                clip_path = clip_text.strip().strip('"')
-                if os.path.exists(clip_path):
-                    file_path = clip_path
+            if Clipboard.Instance.ContainsText: 
+                clip_text = Clipboard.Instance.Text
+                if clip_text:
+                    clip_path = clip_text.strip().strip('"')
+                    if os.path.exists(clip_path):
+                        file_path = clip_path
         except Exception:
             pass
 
