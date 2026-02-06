@@ -17,9 +17,14 @@ class EasyCopy(bpy.types.Operator):
 
         # 2. Export to USDA
         try:
-            # Mac/Linux/Windows 'Desktop'
-            desktop = os.path.join(os.path.expanduser("~"), "Desktop")
-            file_path = os.path.join(desktop, "_temp.usda")
+            # Get Preferences
+            addon_name = __package__
+            prefs = context.preferences.addons[addon_name].preferences
+            
+            temp_dir = prefs.temp_path if prefs.temp_path else os.path.join(os.path.expanduser("~"), "Desktop")
+            temp_name = prefs.temp_name if prefs.temp_name else "_temp.usda"
+            
+            file_path = os.path.join(temp_dir, temp_name)
             
 
             bpy.ops.wm.usd_export(
@@ -53,9 +58,15 @@ class EasyPaste(bpy.types.Operator):
             file_path = context.window_manager.clipboard.strip().strip('"')
             
             if not os.path.exists(file_path):
-                # Fallback to desktop default if not in clipboard or invalid
-                desktop = os.path.join(os.path.expanduser("~"), "Desktop")
-                fallback = os.path.join(desktop, "_temp.usda")
+                # Fallback to defaults from preferences
+                addon_name = __package__
+                prefs = context.preferences.addons[addon_name].preferences
+                
+                temp_dir = prefs.temp_path if prefs.temp_path else os.path.join(os.path.expanduser("~"), "Desktop")
+                temp_name = prefs.temp_name if prefs.temp_name else "_temp.usda"
+                
+                fallback = os.path.join(temp_dir, temp_name)
+                
                 if os.path.exists(fallback):
                     file_path = fallback
                 else:

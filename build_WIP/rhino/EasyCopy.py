@@ -3,7 +3,7 @@
 from library import ET_rhino
 
 def RunCommand():
-   ET_rhino.Execute.Copy()
+   ET_rhino.Execute.EasyCopy()
 
 if __name__ == "__main__":
    RunCommand()

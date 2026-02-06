@@ -1,10 +1,8 @@
 #! python 3
-# r: usd-core, numpy
-
+# r: usd-core
 import Rhino
 import os
 import System
-import numpy as np
 from pxr import Usd, UsdGeom, Gf, Sdf
 
 
@@ -370,7 +368,7 @@ class Execute:
         return path
 
     @staticmethod
-    def Copy():
+    def EasyCopy():
         # Get selected objects directly from RhinoDoc
         rh_objs = list(Rhino.RhinoDoc.ActiveDoc.Objects.GetSelectedObjects(False, False))
         if not rh_objs:
@@ -413,21 +411,20 @@ class Execute:
         print(f"Exported {count} objects to {file_path}")
         
         try:
-            System.Windows.Forms.Clipboard.SetText(file_path)
+            Rhino.UI.Clipboard.SetText(file_path)
         except Exception as e:
             print("Failed to set clipboard:", e)
 
     @staticmethod
-    def Paste():
+    def EasyPaste():
         # 1. Get Path
         file_path = None
         try:
-            if System.Windows.Forms.Clipboard.ContainsText():
-                clip_text = System.Windows.Forms.Clipboard.GetText()
-                if clip_text:
-                    clip_path = clip_text.strip().strip('"')
-                    if os.path.exists(clip_path):
-                        file_path = clip_path
+            clip_text = Rhino.UI.Clipboard.GetText()
+            if clip_text:
+                clip_path = clip_text.strip().strip('"')
+                if os.path.exists(clip_path):
+                    file_path = clip_path
         except Exception:
             pass
 

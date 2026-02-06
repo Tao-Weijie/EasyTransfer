@@ -9,6 +9,7 @@ bl_info = {
 }
 
 import bpy
+import os
 from .ET_blender import EasyCopy, EasyPaste
 
 addon_keymaps = []
@@ -73,7 +74,21 @@ class EasytransferPreferences(bpy.types.AddonPreferences):
     paste_ctrl: bpy.props.BoolProperty(name="Ctrl ", default=True, update=update_keymaps)
     paste_shift: bpy.props.BoolProperty(name="Shift ", default=True, update=update_keymaps)
     paste_alt: bpy.props.BoolProperty(name="Alt ", default=False, update=update_keymaps)
+    paste_alt: bpy.props.BoolProperty(name="Alt ", default=False, update=update_keymaps)
     paste_os: bpy.props.BoolProperty(name="Cmd/Os ", default=False, update=update_keymaps)
+
+    # Temp File Settings
+    temp_path: bpy.props.StringProperty(
+        name="Temp Path",
+        description="Folder for temporary USD file",
+        subtype='DIR_PATH',
+        default=os.path.join(os.path.expanduser("~"), "Desktop")
+    )
+    temp_name: bpy.props.StringProperty(
+        name="Temp Name",
+        description="Name of temporary USD file",
+        default="_temp.usda"
+    )
 
     def draw(self, context):
         layout = self.layout
@@ -108,6 +123,16 @@ class EasytransferPreferences(bpy.types.AddonPreferences):
         row_mods_p.prop(self, "paste_shift", toggle=True)
         row_mods_p.prop(self, "paste_alt", toggle=True)
         row_mods_p.prop(self, "paste_os", toggle=True)
+
+        # Temp File UI
+        box_temp = layout.box()
+        box_temp.label(text="Temporary File Settings", icon='FILE_FOLDER')
+        
+        row_path = box_temp.row()
+        row_path.prop(self, "temp_path")
+        
+        row_name = box_temp.row()
+        row_name.prop(self, "temp_name")
 
 def menu_func(self, context):
     self.layout.separator()
