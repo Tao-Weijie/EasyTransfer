@@ -2,6 +2,7 @@
 # r: usd-core
 import Rhino
 import os
+import System
 from System.Drawing import Color
 from System import Guid
 from Eto.Forms import Clipboard
@@ -486,7 +487,7 @@ class Execute:
                     geometry.Scale(world_scale)
                 
                 if geometry:
-                    guid = System.Guid.Empty
+                    guid = Guid.Empty
                     if isinstance(geometry, Rhino.Geometry.SubD):
                         guid = Rhino.RhinoDoc.ActiveDoc.Objects.AddSubD(geometry)
                     elif isinstance(geometry, Rhino.Geometry.Mesh):
