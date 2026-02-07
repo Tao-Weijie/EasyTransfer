@@ -89,8 +89,6 @@ def build_index():
         if target_asset:
             dl_url = target_asset["browser_download_url"]
             file_size = target_asset["size"] # GitHub API 直接提供大小
-            
-            # ⚠️ 关键步骤：计算 Hash
 
             file_hash = get_sha256_hash(dl_url)
 
@@ -101,7 +99,6 @@ def build_index():
                 "tagline": TAGLINE,
                 "version": final_version,
                 "type": TYPE,
-                "archive_size": file_size,  # ✅ 新增：文件大小 (Int)
                 "archive_hash": file_hash,  # ✅ 新增：SHA256 Hash
                 "archive_url": dl_url,
                 "blender_version_min": BLENDER_MIN,
