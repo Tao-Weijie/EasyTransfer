@@ -25,6 +25,7 @@ def build_index():
     manifest = get_manifest_data()
     
     VERSION = manifest.get("version")
+    NAME = manifest.get("name")
     EXTENSION_ID = manifest.get("id")
     TYPE = manifest.get("type", "add-on")
     BLENDER_MIN = manifest.get("blender_version_min", "4.2.0")
@@ -73,12 +74,13 @@ def build_index():
             # 组装条目：使用 TOML 的静态数据 + Release 的动态数据
             entry = {
                 "id": EXTENSION_ID,
+                "name": NAME,
                 "version": VERSION, # 版本号来自 GitHub Tag
                 "type": TYPE,
                 "archive_url": dl_url,
                 "blender_version_min": BLENDER_MIN, # 来自 TOML
-                "license": LICENSE,                 # 来自 TOML
-                "created": asset_date
+                "license": LICENSE,              
+                "schema_version": "1.0.0"
             }
 
             # 可选字段 (如果 TOML 里有就加上)
@@ -91,7 +93,7 @@ def build_index():
 
     # --- 5. 生成 index.json ---
     repo_index = {
-        "version": "1",
+        "version": "v1",
         "url": f"https://{user}.github.io/{repo}/index.json",
         "data": data_list
     }
