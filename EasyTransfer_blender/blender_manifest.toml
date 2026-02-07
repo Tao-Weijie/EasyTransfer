@@ -8,7 +8,7 @@ maintainer = "Weijie Tao"
 type = "add-on"
 blender_version_min = "4.5.0"
 license = [
-    SPDX:GPL-3.0-or-later"
+    "SPDX:GPL-3.0-or-later"
 ]
 website = "https://github.com/Tao-Weijie/EasyTransfer"
 
