@@ -1,6 +1,5 @@
 schema_version = "1.0.0"
 
-
 id = "easy_transfer"
 version = "0.1.1"
 name = "EasyTransfer"

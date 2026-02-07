@@ -1,107 +1,129 @@
 import json
 import os
 import requests
-import tomllib  # Python 3.11
+import tomllib  
+import hashlib  
 
-
-# 1. 你的插件源代码文件夹名字 (存放 blender_manifest.toml 的地方)
 ADDON_FOLDER_NAME = "EasyTransfer_blender" 
 
-
 def get_manifest_data():
-    """读取本地的 blender_manifest.toml 文件"""
+    """读取本地 TOML"""
     toml_path = os.path.join(ADDON_FOLDER_NAME, "blender_manifest.toml")
-    
     if not os.path.exists(toml_path):
-        raise FileNotFoundError(f"❌ 找不到 TOML 文件: {toml_path}。请检查脚本里的 ADDON_FOLDER_NAME 配置。")
+        raise FileNotFoundError(f"❌ 找不到 TOML: {toml_path}")
     
     with open(toml_path, "rb") as f:
-        data = tomllib.load(f)
-        print(f"✅ 成功读取 TOML: {data.get('id')} (v{data.get('version')})")
-        return data
+        return tomllib.load(f)
+
+def get_sha256_hash(url):
+    """下载文件并计算 SHA256 (流式处理，防止内存溢出)"""
+    print(f"   Calculatng hash for: {url} ...")
+    sha256_hash = hashlib.sha256()
+    try:
+        with requests.get(url, stream=True) as r:
+            r.raise_for_status()
+            for chunk in r.iter_content(chunk_size=8192):
+                sha256_hash.update(chunk)
+        return f"sha256:{sha256_hash.hexdigest()}"
+    except Exception as e:
+        print(f"   ⚠️ Hash calculation failed: {e}")
+        return ""
 
 def build_index():
-    # --- 1. 读取 TOML 元数据 ---
+    # --- 1. 读取本地 TOML ---
     manifest = get_manifest_data()
     
-    VERSION = manifest.get("version")
-    NAME = manifest.get("name")
+    # 提取公共数据
+    TOML_VERSION = manifest.get("version")
     EXTENSION_ID = manifest.get("id")
     TYPE = manifest.get("type", "add-on")
     BLENDER_MIN = manifest.get("blender_version_min", "4.2.0")
-    LICENSE = manifest.get("license", "SPDX:GPL-3.0-or-later")
+    
+    lic = manifest.get("license", "SPDX:GPL-3.0-or-later")
+    LICENSE_LIST = [lic] if isinstance(lic, str) else lic
+    
     MAINTAINER = manifest.get("maintainer", "")
     TAGLINE = manifest.get("tagline", "")
     WEBSITE = manifest.get("website", "")
     TAGS = manifest.get("tags", [])
+    NAME = manifest.get("name", "EasyTransfer")
 
-    # --- 2. 获取 GitHub 仓库信息 ---
-    full_repo = os.environ.get("GITHUB_REPOSITORY")
-    if full_repo:
-        user, repo = full_repo.split("/")
-    else:
-        user = "Tao-Weijie"
-        repo = "EasyTransfer"
+    # --- 2. 环境信息 ---
+    full_repo = os.environ.get("GITHUB_REPOSITORY", "Tao-Weijie/EasyTransfer")
+    current_git_tag = os.environ.get("GITHUB_REF_NAME", "")
+    user, repo = full_repo.split("/")
 
-    # --- 3. 请求 GitHub API ---
+    # --- 3. 获取 Releases ---
     url = f"https://api.github.com/repos/{user}/{repo}/releases"
     print(f"Fetching releases from: {url}")
     
     resp = requests.get(url)
     if resp.status_code != 200:
-        print(f"Error fetching releases: {resp.status_code} {resp.text}")
+        print(f"Error: {resp.status_code} {resp.text}")
         return
 
     releases = resp.json()
     data_list = []
 
-    # --- 4. 遍历 Releases ---
+    # --- 4. 遍历并构建标准格式 ---
     for r in releases:
-        # 跳过 Draft
+        release_tag = r["tag_name"]
+        
+        # 匹配版本号逻辑
+        if release_tag == current_git_tag:
+            final_version = TOML_VERSION
+            print(f"👉 [New] {release_tag} -> {final_version}")
+        else:
+            final_version = release_tag.lstrip("v")
+            print(f"   [Old] {release_tag} -> {final_version}")
+
         if r["draft"]: continue
 
-        # 寻找 ZIP 附件
-        dl_url = None
-        asset_date = r["published_at"]
-        
+        # 寻找 ZIP 资源
+        target_asset = None
         for asset in r["assets"]:
-            # 匹配逻辑：名字含 blender 且是 zip
             if "blender" in asset["name"].lower() and asset["name"].endswith(".zip"):
-                dl_url = asset["browser_download_url"]
+                target_asset = asset
                 break
         
-        if dl_url:
-            # 组装条目：使用 TOML 的静态数据 + Release 的动态数据
+        if target_asset:
+            dl_url = target_asset["browser_download_url"]
+            file_size = target_asset["size"] # GitHub API 直接提供大小
+            
+            # ⚠️ 关键步骤：计算 Hash
+
+            file_hash = get_sha256_hash(dl_url)
+
+            # === 严格对照你提供的标准格式构建 Entry ===
             entry = {
                 "id": EXTENSION_ID,
                 "name": NAME,
-                "version": VERSION, # 版本号来自 GitHub Tag
+                "tagline": TAGLINE,
+                "version": final_version,
                 "type": TYPE,
+                "archive_size": file_size,  # ✅ 新增：文件大小 (Int)
+                "archive_hash": file_hash,  # ✅ 新增：SHA256 Hash
                 "archive_url": dl_url,
-                "blender_version_min": BLENDER_MIN, # 来自 TOML
-                "license": LICENSE,              
-                "schema_version": "1.0.0"
+                "blender_version_min": BLENDER_MIN,
+                "maintainer": MAINTAINER,
+                "tags": TAGS,
+                "license": LICENSE_LIST,    # ✅ 修正：列表格式
+                "website": WEBSITE,
+                "schema_version": "1.0.0"   # ✅ 条目级 Schema
             }
-
-            # 可选字段 (如果 TOML 里有就加上)
-            if MAINTAINER: entry["maintainer"] = MAINTAINER
-            if TAGLINE: entry["tagline"] = TAGLINE
-            if WEBSITE: entry["website"] = WEBSITE
-            if TAGS: entry["tags"] = TAGS
-            
             data_list.append(entry)
 
-    # --- 5. 生成 index.json ---
+    # --- 5. 生成根 JSON ---
     repo_index = {
-        "version": "v1",
-        "url": f"https://{user}.github.io/{repo}/index.json",
+        "version": "1",    # 列表 API 版本 (官方通常用 "1")
+        "blocklist": [],   # ✅ 新增：黑名单字段 (标准格式要求)
         "data": data_list
     }
     
     with open("index.json", "w", encoding='utf-8') as f:
         json.dump(repo_index, f, indent=2, ensure_ascii=False)
     
-    print(f"Successfully generated index.json with {len(data_list)} versions.")
+    print(f"✅ Generated standard index.json with {len(data_list)} items.")
 
 if __name__ == "__main__":
     build_index()
