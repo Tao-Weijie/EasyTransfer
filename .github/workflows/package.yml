@@ -68,7 +68,7 @@ jobs:
         run: pip install requests
 
       - name: Wait for API consistency
-        run: sleep 1
+        run: sleep 30
 
       # --- 修改点：直接运行仓库里的 Python 文件 ---
       - name: Generate index.json
