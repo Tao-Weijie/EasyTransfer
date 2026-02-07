@@ -17,6 +17,6 @@ website = "https://github.com/Tao-Weijie/EasyTransfer"
 tags = ["Import-Export", "Pipeline"]
 
 [permissions]
-network = { reason = "Check for updates and download models." }
-clipboard = { reason = "Read clipboard for transfer paths." }
-files = { reason = "Save temporary USD files." }
+network = "Check for updates and download models." 
+clipboard = "Read clipboard for transfer paths." 
+files = "Save temporary USD files." 
