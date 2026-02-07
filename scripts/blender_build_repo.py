@@ -99,14 +99,15 @@ def build_index():
                 "tagline": TAGLINE,
                 "version": final_version,
                 "type": TYPE,
-                "archive_hash": file_hash,  # ✅ 新增：SHA256 Hash
+                "archive_hash": file_hash,
+                "archive_size": file_size,  
                 "archive_url": dl_url,
                 "blender_version_min": BLENDER_MIN,
                 "maintainer": MAINTAINER,
                 "tags": TAGS,
-                "license": LICENSE_LIST,    # ✅ 修正：列表格式
+                "license": LICENSE_LIST,    
                 "website": WEBSITE,
-                "schema_version": "1.0.0"   # ✅ 条目级 Schema
+                "schema_version": "1.0.0"   
             }
             data_list.append(entry)
 
