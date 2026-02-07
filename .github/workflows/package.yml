@@ -58,18 +58,17 @@ jobs:
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
-        # Checkout 会自动把 scripts/build_repo.py 下载下来
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.x'
+          python-version: '3.11'
 
       - name: Install dependencies
         run: pip install requests
 
       - name: Wait for API consistency
-        run: sleep 30
+        run: sleep 1
 
       # --- 修改点：直接运行仓库里的 Python 文件 ---
       - name: Generate index.json
