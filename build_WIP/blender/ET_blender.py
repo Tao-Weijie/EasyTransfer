@@ -30,6 +30,7 @@ class EasyCopy(bpy.types.Operator):
             bpy.ops.wm.usd_export(
                 filepath=file_path,
                 selected_objects_only=True,
+                evaluation_mode='VIEWPORT',
                 export_custom_properties=True, 
                 convert_world_material=False,
                 export_subdivision='BEST_MATCH',

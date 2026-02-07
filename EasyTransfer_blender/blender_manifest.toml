@@ -1,0 +1,22 @@
+schema_version = "1.0.0"
+
+
+id = "easy_transfer"
+version = "0.1.0"
+name = "EasyTransfer"
+tagline = "Seamlessly transfer geometry between Rhino and Blender"
+maintainer = "Weijie Tao"
+type = "add-on"
+
+blender_version_min = "4.2.0"
+
+license = "SPDX:GPL-3.0-or-later"
+
+website = "https://github.com/Tao-Weijie/EasyTransfer"
+
+tags = ["Import-Export", "Pipeline"]
+
+[permissions]
+network = { reason = "Check for updates and download models." }
+clipboard = { reason = "Read clipboard for transfer paths." }
+files = { reason = "Save temporary USD files." }

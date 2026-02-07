@@ -1,17 +1,21 @@
 name: Auto Package & Release
 
-# 1. Trigger: Only when pushing a tag starting with 'v' (e.g., v0.1.0)
 on:
   push:
     tags:
       - "v*"
   workflow_dispatch:
 
-# 2. Allow Release
+# 权限设置：必须开启 pages 和 id-token 才能部署网页
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 jobs:
+
+  # Job 1: Release
+
   build-and-release:
     name: Build and Release
     runs-on: ubuntu-latest 
@@ -20,20 +24,23 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      # --- blender ---
+      # --- 1. Blender ---
       - name: Package Blender Addon
         run: |
+          # 动态文件名: EasyTransfer_blender_v0.1.0.zip
           BLENDER_ZIP="EasyTransfer_blender_${{ github.ref_name }}.zip"
           
+          # 打包 (保留文件夹结构，这对插件很重要)
           zip -r $BLENDER_ZIP EasyTransfer_blender \
             -x "*.git*" \
             -x "*.DS_Store" \
             -x "*__pycache__*" \
             -x "*.vscode*"
             
+          # 保存文件名到环境变量，供后面使用
           echo "BLENDER_FILENAME=$BLENDER_ZIP" >> $GITHUB_ENV
 
-      # --- rhino ---
+      # --- 2. Rhino ---
       - name: Package Rhino Plugin
         run: |
           RHINO_ZIP="EasyTransfer_rhino_${{ github.ref_name }}.zip"
@@ -46,7 +53,7 @@ jobs:
             
           echo "RHINO_FILENAME=$RHINO_ZIP" >> $GITHUB_ENV
 
-      # --- release ---
+      # --- 3. Release ---
       - name: Create Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
@@ -58,3 +65,101 @@ jobs:
           files: |
             ${{ env.BLENDER_FILENAME }}
             ${{ env.RHINO_FILENAME }}
+
+  # Job 2: 生成仓库索引并部署到 GitHub Pages
+  update-repo:
+    needs: build-and-release 
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      # 等待 30 秒，确保 GitHub API 已经能查到刚才发布的 Release
+      - name: Wait for API consistency
+        run: sleep 30
+
+      # --- 核心步骤：生成 index.json ---
+      - name: Generate index.json
+        env:
+          # 自动获取当前仓库信息 (格式如 User/Repo)
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          cat <<EOF > build_repo.py
+          import json
+          import os
+          import requests
+          
+          # 1. 自动配置仓库信息
+          full_repo = os.environ.get("GITHUB_REPOSITORY")
+          user, repo = full_repo.split("/")
+          
+          # 2. 配置你的插件 ID (必须与 blender_manifest.toml 里的一致！)
+          EXTENSION_ID = "easy_transfer" 
+          
+          def build_index():
+              url = f"https://api.github.com/repos/{user}/{repo}/releases"
+              print(f"Fetching releases from: {url}")
+              
+              resp = requests.get(url)
+              if resp.status_code != 200:
+                  print("Error fetching releases:", resp.text)
+                  return
+
+              releases = resp.json()
+              versions = []
+
+              for r in releases:
+                  tag = r["tag_name"]
+                  # 去掉 'v' 前缀: v0.1.0 -> 0.1.0
+                  ver_num = tag.lstrip("v")
+                  
+                  # 找 Blender 的 ZIP 包
+                  dl_url = None
+                  for asset in r["assets"]:
+                      # 这里的判断逻辑是：文件名包含 'blender' 且是 zip
+                      if "blender" in asset["name"].lower() and asset["name"].endswith(".zip"):
+                          dl_url = asset["browser_download_url"]
+                          break
+                  
+                  if dl_url:
+                      versions.append({
+                          "id": EXTENSION_ID,
+                          "version": ver_num,
+                          "archive_url": dl_url
+                      })
+
+              # 生成最终 JSON
+              repo_data = {"data": versions}
+              
+              with open("index.json", "w") as f:
+                  json.dump(repo_data, f, indent=2)
+              print("index.json created successfully!")
+
+          if __name__ == "__main__":
+              build_index()
+          EOF
+          
+          # 运行刚刚生成的脚本
+          python build_repo.py
+
+      # --- 部署步骤 ---
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: . # 上传当前目录 (包含生成的 index.json)
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
