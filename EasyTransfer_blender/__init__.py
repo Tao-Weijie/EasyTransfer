@@ -87,7 +87,7 @@ class EasytransferPreferences(bpy.types.AddonPreferences):
     temp_name: bpy.props.StringProperty(
         name="Temp Name",
         description="Name of temporary USD file",
-        default="_temp.usda"
+        default="_temp.usd"
     )
 
     def draw(self, context):

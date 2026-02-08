@@ -11,11 +11,11 @@ using Rhino.PlugIns;
 [assembly: PlugInDescription(DescriptionType.Address, "")]
 [assembly: PlugInDescription(DescriptionType.Country, "")]
 [assembly: PlugInDescription(DescriptionType.WebSite, "")]
-[assembly: PlugInDescription(DescriptionType.UpdateUrl, "")]
+[assembly: PlugInDescription(DescriptionType.UpdateUrl, "https://github.com/Tao-Weijie/EasyTransfer")]
 [assembly: PlugInDescription(DescriptionType.Icon, "EasyTransfer.Resources.projectIcon.ico")]
 
 [assembly: AssemblyTitle("EasyTransfer")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyDescription("Seamlessly transfer geometry between Rhino and Blender")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("EasyTransfer")]
 [assembly: AssemblyCopyright("版权 © 2026 Weijie Tao")]
@@ -25,8 +25,8 @@ using Rhino.PlugIns;
 
 [assembly: ComVisible(false)]
 [assembly: Guid("9a4a4b5c-9028-48ca-adb0-5e8248f337a0")]
-[assembly: AssemblyVersion("0.1.34364.9534")]
-[assembly: AssemblyFileVersion("0.1.34364.9534")]
-[assembly: AssemblyInformationalVersion("0.1.34364.9534")]
+[assembly: AssemblyVersion("0.1.1.9535")]
+[assembly: AssemblyFileVersion("0.1.1.9535")]
+[assembly: AssemblyInformationalVersion("0.1.1.9535")]
 
 [assembly: TargetFramework(".NETFramework,Version=v4.8", FrameworkDisplayName = ".NET Framework 4.8")]

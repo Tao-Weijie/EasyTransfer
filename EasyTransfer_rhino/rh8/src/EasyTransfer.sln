@@ -1,7 +1,7 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9a4a4b5c-9028-48ca-adb0-5e8248f337a0}") = "EasyTransfer", "EasyTransfer\EasyTransfer.csproj", "{d9b4648d-4f49-41b8-9eb7-de6c1fb1e90d}"
+Project("{9a4a4b5c-9028-48ca-adb0-5e8248f337a0}") = "EasyTransfer", "EasyTransfer\EasyTransfer.csproj", "{4de9cbb3-5f87-496f-a132-ef1d65f9d047}"
 EndProject
 
 Global
@@ -10,9 +10,9 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{d9b4648d-4f49-41b8-9eb7-de6c1fb1e90d}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{d9b4648d-4f49-41b8-9eb7-de6c1fb1e90d}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{d9b4648d-4f49-41b8-9eb7-de6c1fb1e90d}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{d9b4648d-4f49-41b8-9eb7-de6c1fb1e90d}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4de9cbb3-5f87-496f-a132-ef1d65f9d047}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4de9cbb3-5f87-496f-a132-ef1d65f9d047}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4de9cbb3-5f87-496f-a132-ef1d65f9d047}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4de9cbb3-5f87-496f-a132-ef1d65f9d047}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

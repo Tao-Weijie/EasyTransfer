@@ -1,8 +1,27 @@
 import bpy
 import os
+import time
+
+def GetTempPath(context):
+    """Retrieves the USD file path from clipboard."""
+    try:
+        file_path = context.window_manager.clipboard.strip().strip('"')
+        if os.path.exists(file_path) and os.path.isfile(file_path):
+             return file_path
+    except:
+        pass
+        
+    return None
+
+def SetTempPath():
+    addon_name = __package__
+    prefs = bpy.context.preferences.addons[addon_name].preferences
+    temp_dir = prefs.temp_path if prefs.temp_path else os.path.join(os.path.expanduser("~"), "Desktop")
+    temp_name = prefs.temp_name if prefs.temp_name else "_temp.usd"
+    return os.path.join(temp_dir, temp_name)
 
 class EasyCopy(bpy.types.Operator):
-    """Copy selected meshes to clipboard as USDA"""
+    """Copy selected meshes to clipboard as USD"""
     bl_idname = "object.easy_copy_usd"
     bl_label = "Copy to Clipboard (USD)"
     bl_options = {'REGISTER', 'UNDO'}
@@ -15,30 +34,26 @@ class EasyCopy(bpy.types.Operator):
             self.report({'WARNING'}, "No objects selected.")
             return {'CANCELLED'}
 
-        # 2. Export to USDA
+        # 2. Export to USD
         try:
-            # Get Preferences
-            addon_name = __package__
-            prefs = context.preferences.addons[addon_name].preferences
-            
-            temp_dir = prefs.temp_path if prefs.temp_path else os.path.join(os.path.expanduser("~"), "Desktop")
-            temp_name = prefs.temp_name if prefs.temp_name else "_temp.usda"
-            
-            file_path = os.path.join(temp_dir, temp_name)
-            
+            file_path = SetTempPath()
+            start_time = time.time()
 
             bpy.ops.wm.usd_export(
                 filepath=file_path,
                 selected_objects_only=True,
+                root_prim_path="",
+                merge_parent_xform=True,
+                author_blender_name=False,
                 evaluation_mode='VIEWPORT',
                 export_custom_properties=True, 
                 convert_world_material=False,
                 export_subdivision='BEST_MATCH',
             )
                 
-            self.report({'INFO'}, f"Copied objects to {file_path}")
+            elapsed_time = time.time() - start_time
+            self.report({'INFO'}, f"Copied objects to {file_path} in {elapsed_time:.4f} seconds")
             
-            # Copy path to Clipboard
             context.window_manager.clipboard = file_path
             
         except Exception as e:
@@ -54,27 +69,16 @@ class EasyPaste(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
         
     def execute(self, context):
-        """Imports USDA from clipboard path."""
+        """Imports USD from clipboard path."""
         try:
-            file_path = context.window_manager.clipboard.strip().strip('"')
+            file_path = GetTempPath(context)
             
-            if not os.path.exists(file_path):
-                # Fallback to defaults from preferences
-                addon_name = __package__
-                prefs = context.preferences.addons[addon_name].preferences
-                
-                temp_dir = prefs.temp_path if prefs.temp_path else os.path.join(os.path.expanduser("~"), "Desktop")
-                temp_name = prefs.temp_name if prefs.temp_name else "_temp.usda"
-                
-                fallback = os.path.join(temp_dir, temp_name)
-                
-                if os.path.exists(fallback):
-                    file_path = fallback
-                else:
-                    self.report({'ERROR'}, f"File not found at path: {file_path}")
-                    return {'CANCELLED'}
+            if not file_path:
+                self.report({'ERROR'}, "Clipboard does not contain a valid file path.")
+                return {'CANCELLED'}
 
             bpy.ops.object.select_all(action='DESELECT')
+            start_time = time.time()
             
             bpy.ops.wm.usd_import(
                 filepath=file_path,
@@ -86,6 +90,8 @@ class EasyPaste(bpy.types.Operator):
                 read_mesh_attributes=True,
                 read_mesh_colors=True
             )
+            
+            elapsed_time = time.time() - start_time
                 
         except Exception as e:
             self.report({'ERROR'}, f"Error importing USD: {e}")
@@ -93,7 +99,7 @@ class EasyPaste(bpy.types.Operator):
 
         selected = context.selected_objects
         if selected:
-            self.report({'INFO'}, f"Successfully pasted {len(selected)} objects.")
+            self.report({'INFO'}, f"Successfully pasted {len(selected)} objects in {elapsed_time:.4f} seconds.")
         else:
             self.report({'WARNING'}, "No objects appeared to be pasted.")
 
