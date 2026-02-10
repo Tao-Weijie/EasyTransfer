@@ -26,7 +26,7 @@ def SetUsdSchemeAttribute(shape_node, scheme_type):
     
     cmds.setAttr(f"{shape_node}.{attr_name}", scheme_type, type="string")
 
-def TagObjects():
+def TagCreases():
     shapes = cmds.ls(selection=True, dag=True, type="mesh", noIntermediate=True)
     
     if not shapes:
@@ -59,7 +59,7 @@ def EasyCopy():
         om.MGlobal.displayWarning("EasyTransfer: No objects selected.")
         return
     
-    TagObjects()
+    TagCreases()
 
     file_path = GetTempPath()
     
@@ -121,7 +121,7 @@ def EasyPaste():
 
         start_time = time.time()
 
-        new_nodes = cmds.file(
+        cmds.file(
             file_path, 
             i=True, 
             type="USD Import", 
@@ -133,32 +133,6 @@ def EasyPaste():
             options=options
         )
 
-        # if not new_nodes: return
-
-        # roots = []
-        # for node in new_nodes:
-        #     if cmds.objectType(node) == "transform":
-        #         # 没有父级的就是顶层
-        #         if not cmds.listRelatives(node, parent=True):
-        #             roots.append(node)
-        
-        # # 实际上我们关心的模型都在这些 Root 下面
-        # # 我们把 Root 下的孩子提出来
-        # valid_children = []
-        
-        # for root in roots:
-        #     # 获取所有孩子 (Full Path)
-        #     children = cmds.listRelatives(root, children=True, fullPath=True)
-        #     if children:
-        #         # --- 关键动作：移到世界层级 ---
-        #         # absolute=True: 保持视觉位置不变 (应用 Root 的旋转/缩放)
-        #         cmds.parent(children, world=True, absolute=True)
-        #         valid_children.extend(children)
-            
-        #     # 删掉那个空的 Root 壳
-        #     if cmds.objExists(root):
-        #         cmds.delete(root)
-        
         elapsed_time = time.time() - start_time
         om.MGlobal.displayInfo(f"EasyTransfer: Imported from {file_path} in {elapsed_time:.4f} seconds")
         

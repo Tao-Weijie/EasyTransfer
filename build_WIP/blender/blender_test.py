@@ -1,5 +1,6 @@
 import bpy
 import os
+import time
 
 def GetTempPath():
     """Returns a fixed temp path for export."""
@@ -42,7 +43,8 @@ def EasyCopy():
             export_subdivision='BEST_MATCH',
         )
             
-        print(f"INFO: Copied objects to {file_path}")
+        elapsed_time = time.time() - start_time
+        print(f"INFO: Copied objects to {file_path} in {elapsed_time:.4f} seconds")
         
         # Copy path to Clipboard
         context.window_manager.clipboard = file_path
@@ -62,6 +64,8 @@ def EasyPaste():
 
         bpy.ops.object.select_all(action='DESELECT')
         
+        start_time = time.time()
+        
         bpy.ops.wm.usd_import(
             filepath=file_path,
             import_subdivision=True,
@@ -72,6 +76,8 @@ def EasyPaste():
             read_mesh_attributes=True,
             read_mesh_colors=True
         )
+        
+        elapsed_time = time.time() - start_time
             
     except Exception as e:
         print(f"ERROR: Error importing USD: {e}")
@@ -79,7 +85,7 @@ def EasyPaste():
 
     selected = context.selected_objects
     if selected:
-        print(f"INFO: Successfully pasted {len(selected)} objects.")
+        print(f"INFO: Successfully pasted {len(selected)} objects in {elapsed_time:.4f} seconds.")
     else:
         print("WARNING: No objects appeared to be pasted.")
 

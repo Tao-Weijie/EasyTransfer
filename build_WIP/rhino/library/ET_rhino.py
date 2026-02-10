@@ -13,7 +13,7 @@ class Converter:
     """Handles conversion between Rhino Geometry and USD Prims."""
     
     @staticmethod
-    def ExportUserAttributes(rh_obj, usd_prim):
+    def ExportUserAttr(rh_obj, usd_prim):
         """Exports Rhino User Strings to USD Custom Attributes."""
         attrs = rh_obj.Attributes
         if not attrs:
@@ -22,29 +22,60 @@ class Converter:
         user_strings = attrs.GetUserStrings()
         if user_strings:
             for key in user_strings.AllKeys:
-                val = user_strings[key]
+                val = attrs.GetUserString(key)
                 try:
-                    # Use 'userProperties' namespace
                     attr_name = f"userProperties:{key}"
-                    # Rhino UserText is string
                     attr = usd_prim.CreateAttribute(attr_name, Sdf.ValueTypeNames.String)
                     attr.Set(str(val))
                 except Exception:
                     pass
 
     @staticmethod
-    def ExportMesh(rh_obj, stage, parent_path, index):
-        """Converts a Rhino Object's Mesh to a USD Mesh Prim."""
-        mesh = rh_obj.Geometry
+    def ImportUserAttr(usd_prim, rh_obj):
+        """Imports USD Custom Attributes to Rhino User Strings."""
+        # Get all attributes
+        attrs = usd_prim.GetAttributes()
+        if not attrs:
+            return
+            
+        for attr in attrs:
+            name = attr.GetName()
+            if name.startswith("userProperties:"):
+                key = name.split(":", 1)[1]
+                val = attr.Get()
+                if val is not None:
+                    rh_obj.Attributes.SetUserString(key, str(val))
+
+
+    @staticmethod
+    def GetValidName(name):
+        """Sanitizes a string to be a valid USD identifier."""
+        if not name:
+            return None
         
-        valid_name = f"RhinoObject_{index}"
-        mesh_path = f"{parent_path}/{valid_name}"
+        valid_name = "".join(c if c.isalnum() or c == '_' else '_' for c in name)
+        
+        if valid_name and valid_name[0].isdigit():
+            valid_name = "_" + valid_name
+            
+        return valid_name
+
+    @staticmethod
+    def ExportMesh(rh_obj, stage, parent_path, name, mesh_override=None):
+        """Converts a Rhino Object's Mesh to a USD Mesh Prim."""
+        mesh = mesh_override if mesh_override else rh_obj.Geometry
+        
+        mesh_path = f"{parent_path}/{name}"
         usd_mesh = UsdGeom.Mesh.Define(stage, mesh_path)
         
-        # Vertices
-        verts = mesh.Vertices
-        points = [Gf.Vec3f(v.X, v.Y, v.Z) for v in verts]
+        # Vertices (Topology)
+        topo_verts = mesh.TopologyVertices
+        points = [Gf.Vec3f(v.X, v.Y, v.Z) for v in topo_verts]
         usd_mesh.CreatePointsAttr(points)
+        
+        # Helper to map mesh vertex index to topology vertex index
+        def topo_idx(idx):
+            return topo_verts.TopologyVertexIndex(idx)
         
         # Faces
         face_counts = []
@@ -57,8 +88,9 @@ class Converter:
                 v_indices = ngon.BoundaryVertexIndexList()
                 if v_indices and len(v_indices) > 0:
                     face_counts.append(len(v_indices))
-                    face_indices.extend(v_indices)
-                    # Mark component faces as processed
+                    topo_indices = [topo_idx(vi) for vi in v_indices]
+                    face_indices.extend(topo_indices)
+                    
                     f_indices = ngon.FaceIndexList()
                     for f_idx in f_indices:
                         processed_faces.add(f_idx)
@@ -72,107 +104,78 @@ class Converter:
             f = faces[i]
             if f.IsQuad:
                 face_counts.append(4)
-                face_indices.extend([f.A, f.B, f.C, f.D])
+                face_indices.extend([
+                    topo_idx(f.A), 
+                    topo_idx(f.B), 
+                    topo_idx(f.C), 
+                    topo_idx(f.D)
+                ])
             else:
                 face_counts.append(3)
-                face_indices.extend([f.A, f.B, f.C])
+                face_indices.extend([
+                    topo_idx(f.A), 
+                    topo_idx(f.B), 
+                    topo_idx(f.C)
+                ])
         
         usd_mesh.CreateFaceVertexCountsAttr(face_counts)
         usd_mesh.CreateFaceVertexIndicesAttr(face_indices)
-        usd_mesh.CreateSubdivisionSchemeAttr(UsdGeom.Tokens.none)
         
+        # 3. Handle Creases (Unwelded Edges)
+        crease_indices = []
+        crease_lengths = []
+        crease_sharpnesses = []
+        
+        topo_edges = mesh.TopologyEdges
+        
+        for i in range(topo_edges.Count):
+            connected_faces = topo_edges.GetConnectedFaces(i)
+            
+            if len(connected_faces) == 2:
+                edge_topo_pair = topo_edges.GetTopologyVertices(i)
+                tv1 = edge_topo_pair.I
+                tv2 = edge_topo_pair.J
+                
+                if topo_edges.IsEdgeUnwelded(i):
+                    crease_indices.extend([tv1, tv2])
+                    crease_lengths.append(2)
+                    crease_sharpnesses.append(10.0) # Sharp
+
+        if crease_indices:
+            usd_mesh.CreateCreaseIndicesAttr(crease_indices)
+            usd_mesh.CreateCreaseLengthsAttr(crease_lengths)
+            usd_mesh.CreateCreaseSharpnessesAttr(crease_sharpnesses)
+        
+        usd_mesh.CreateSubdivisionSchemeAttr(UsdGeom.Tokens.none)
         # Extent (Bounding Box)
         bbox = mesh.GetBoundingBox(True)
         extent = [Gf.Vec3f(bbox.Min.X, bbox.Min.Y, bbox.Min.Z), Gf.Vec3f(bbox.Max.X, bbox.Max.Y, bbox.Max.Z)]
         usd_mesh.CreateExtentAttr(extent)
         
         # User Attributes
-        Converter.ExportUserAttributes(rh_obj, usd_mesh.GetPrim())
+        Converter.ExportUserAttr(rh_obj, usd_mesh.GetPrim())
         
         return usd_mesh
 
     @staticmethod
-    def ExportSubD(rh_obj, stage, parent_path, index):
+    def ExportSubD(rh_obj, stage, parent_path, name):
         """Converts a Rhino Object's SubD to a USD Mesh Prim with Catmull-Clark subdivision."""
-        geo = rh_obj.Geometry
-            
-        valid_name = f"RhinoObject_{index}"
-        mesh_path = f"{parent_path}/{valid_name}"
-        usd_mesh = UsdGeom.Mesh.Define(stage, mesh_path)
-        
-        # 1. Vertex Map & Points
-        vertex_map = {} # SubDVertexId -> New Index
-        points = []
-        new_index_counter = 0
-        
-        # Iterate over all vertices in the SubD using linked list traversal
-        v = geo.Vertices.First
-        while v:
-            if v.Id not in vertex_map:
-                vertex_map[v.Id] = new_index_counter
-                points.append(Gf.Vec3f(v.ControlNetPoint.X, v.ControlNetPoint.Y, v.ControlNetPoint.Z))
-                new_index_counter += 1
-            v = v.Next
-        
-        usd_mesh.CreatePointsAttr(points)
-        
-        # 2. Faces
-        face_counts = []
-        face_indices = []
-        
-        for f in geo.Faces:
-            # f.VertexCount gives number of vertices for this face
-            count = f.VertexCount
-            face_counts.append(count)
-            
-            for i in range(count):
-                v = f.VertexAt(i)
-                face_indices.append(vertex_map[v.Id])
+        subd = rh_obj.Geometry
+        ctrl_mesh = Rhino.Geometry.Mesh.CreateFromSubDControlNet(subd)
 
+        usd_mesh = Converter.ExportMesh(rh_obj, stage, parent_path, name, mesh_override=ctrl_mesh)
         
-        usd_mesh.CreateFaceVertexCountsAttr(face_counts)
-        usd_mesh.CreateFaceVertexIndicesAttr(face_indices)
-        
-        # 3. Subdivision Scheme
         usd_mesh.CreateSubdivisionSchemeAttr(UsdGeom.Tokens.catmullClark)
-        crease_indices = []
-        crease_lengths = []
-        crease_sharpnesses = []
-        
-        for edge in geo.Edges:
-            if edge.Tag == Rhino.Geometry.SubDEdgeTag.Crease:
-                v1 = edge.VertexFrom
-                v2 = edge.VertexTo
-                
-                idx1 = vertex_map[v1.Id]
-                idx2 = vertex_map[v2.Id]
-                
-                crease_indices.extend([idx1, idx2])
-                crease_lengths.append(2)
-                crease_sharpnesses.append(10.0)
-        
-        if crease_indices:
-            usd_mesh.CreateCreaseIndicesAttr(crease_indices)
-            usd_mesh.CreateCreaseLengthsAttr(crease_lengths)
-            usd_mesh.CreateCreaseSharpnessesAttr(crease_sharpnesses)
-        
-        # Extent
-        bbox = geo.GetBoundingBox(True)
-        extent = [Gf.Vec3f(bbox.Min.X, bbox.Min.Y, bbox.Min.Z), Gf.Vec3f(bbox.Max.X, bbox.Max.Y, bbox.Max.Z)]
-        usd_mesh.CreateExtentAttr(extent)
-        
-        # User Attributes
-        Converter.ExportUserAttributes(rh_obj, usd_mesh.GetPrim())
+        Converter.ExportUserAttr(rh_obj, usd_mesh.GetPrim())
         
         return usd_mesh
 
     @staticmethod
-    def ExportPointCloud(rh_obj, stage, parent_path, index):
+    def ExportPointCloud(rh_obj, stage, parent_path, name):
         """Converts a Rhino Object's PointCloud to a USD Points Prim."""
         geo = rh_obj.Geometry
         
-        valid_name = f"RhinoObject_{index}"
-        points_path = f"{parent_path}/{valid_name}"
+        points_path = f"{parent_path}/{name}"
         usd_points = UsdGeom.Points.Define(stage, points_path)
         
         # 1. Points
@@ -198,7 +201,7 @@ class Converter:
         usd_points.CreateExtentAttr(extent)
         
         # User Attributes
-        Converter.ExportUserAttributes(rh_obj, usd_points.GetPrim())
+        Converter.ExportUserAttr(rh_obj, usd_points.GetPrim())
         
         return usd_points
 
@@ -213,12 +216,14 @@ class Converter:
         if not points_attr or not counts_attr or not indices_attr:
             return None
         
+        # 1. Add Points
         rh_mesh = Rhino.Geometry.Mesh()
         rh_points = [Rhino.Geometry.Point3d(p[0], p[1], p[2]) for p in points_attr]
         rh_mesh.Vertices.AddVertices(rh_points)
-            
-        # Add Faces
+        
+        # 2. Add Faces
         idx_ptr = 0
+        ngon_data = []
         for count in counts_attr:
             face_verts = indices_attr[idx_ptr : idx_ptr + count]
             
@@ -240,17 +245,68 @@ class Converter:
                     )
                     new_face_indices.append(f_idx)
                 
-                ngon = Rhino.Geometry.MeshNgon.Create(face_verts, new_face_indices)
-                rh_mesh.Ngons.AddNgon(ngon)
+                ngon_data.append(new_face_indices)
             
             idx_ptr += count
+
+        # 3. Unweld Edges
+        topo_verts = rh_mesh.TopologyVertices
+        def topo_idx(idx):
+            return topo_verts.TopologyVertexIndex(idx)
             
+        crease_indices = usd_mesh_geom.GetCreaseIndicesAttr().Get()
+        crease_lengths = usd_mesh_geom.GetCreaseLengthsAttr().Get()
+        
+        crease_edge= []
+        if crease_indices and crease_lengths:
+            idx_ptr = 0
+            topo_edges = rh_mesh.TopologyEdges
+            
+            for length in crease_lengths:
+                chain = crease_indices[idx_ptr : idx_ptr + length]
+               
+                for i in range(len(chain) - 1):
+                    idx1 = chain[i]
+                    idx2 = chain[i+1]  
+                    edge_idx = topo_edges.GetEdgeIndex(topo_idx(idx1), topo_idx(idx2))
+                    if edge_idx == -1:
+                        edge_idx = topo_edges.GetEdgeIndex(topo_idx(idx2), topo_idx(idx1))
+
+                    if edge_idx != -1:
+                        crease_edge.append(edge_idx)
+                idx_ptr += length
+
+            rh_mesh.UnweldEdge(crease_edge, False)    
+
+        # 4. Reconstruct Ngons
+        if ngon_data:
+            for f_indices in ngon_data:
+                # Collect boundary edges
+                v_indices = []
+                
+                for f_idx ,i in enumerate(f_indices):
+                    f = rh_mesh.Faces[f_idx]
+                    if i==0:
+                        v_indices.append(f.A)
+                        v_indices.append(f.B)
+                    elif i==len(f_indices)-1:
+                        v_indices.append(f.B)
+                        v_indices.append(f.C)
+                    else:
+                        v_indices.append(f.B)
+                try:
+                    ngon = Rhino.Geometry.MeshNgon.Create(v_indices, f_indices)
+                    rh_mesh.Ngons.AddNgon(ngon)
+                except Exception:
+                    pass
+        
         rh_mesh.Normals.ComputeNormals()
         rh_mesh.Compact()
         
-        if rh_mesh.IsValid:
-            return rh_mesh
-        return None
+        if not rh_mesh.IsValid:
+            return None
+        
+        return rh_mesh
 
     @staticmethod
     def ImportSubD(usd_mesh_geom):
@@ -260,42 +316,12 @@ class Converter:
         if not rh_mesh or not rh_mesh.IsValid:
             return None
             
-        subd = Rhino.Geometry.SubD.CreateFromMesh(rh_mesh)
-        if not subd:
-            return None
-            
-        # 3. Apply Creases
-        crease_indices = usd_mesh_geom.GetCreaseIndicesAttr().Get()
-        crease_lengths = usd_mesh_geom.GetCreaseLengthsAttr().Get()
+        rh_subd = Rhino.Geometry.SubD.CreateFromMesh(rh_mesh,Rhino.Geometry.SubDCreationOptions.InteriorCreases)
         
-        if crease_indices and crease_lengths:
-            crease_pairs = set()
-            idx_ptr = 0
-            for length in crease_lengths:
-                chain = crease_indices[idx_ptr : idx_ptr + length]
-                
-                for i in range(len(chain) - 1):
-                    idx1 = chain[i]
-                    idx2 = chain[i+1]
-                    if idx1 > idx2:
-                        crease_pairs.add((idx2, idx1))
-                    else:
-                        crease_pairs.add((idx1, idx2))
-                
-                idx_ptr += length
-            
-            # 3. Iterate SubD Edges and match
-            for edge in subd.Edges:
-                i1 = edge.VertexFrom.Id -1
-                i2 = edge.VertexTo.Id-1
-                
-                pair = (i2, i1) if i1 > i2 else (i1, i2)
-                    
-                if pair in crease_pairs:
-                    edge.Tag = Rhino.Geometry.SubDEdgeTag.Crease
-            subd.UpdateAllTagsAndSectorCoefficients()
-                
-        return subd
+        if not rh_subd:
+            return None
+
+        return rh_subd
 
     @staticmethod
     def ImportPoints(usd_points_geom):
@@ -388,22 +414,37 @@ class Execute:
         scale_to_meters = Rhino.RhinoMath.UnitScale(model_units, Rhino.UnitSystem.Meters)
         UsdGeom.SetStageMetersPerUnit(stage, scale_to_meters)
         
-        root_path = "/Root"
-        root_prim = UsdGeom.Xform.Define(stage, root_path)
-        stage.SetDefaultPrim(root_prim.GetPrim())
-        
-        # 2. Convert Objects
+        root_path = ""
         count = 0
+        used_names = set()
+        
         for i, rh_obj in enumerate(rh_objs):           
             geo = rh_obj.Geometry
+            
+            # Determine Name
+            raw_name = rh_obj.Attributes.Name
+            valid_name = Converter.GetValidName(raw_name)
+            
+            if not valid_name:
+                valid_name = f"RhinoObject_{i}"
+            
+            # Handle duplicates
+            base_name = valid_name
+            dup_count = 1
+            while valid_name in used_names:
+                valid_name = f"{base_name}_{dup_count}"
+                dup_count += 1
+            
+            used_names.add(valid_name)
+            
             usd_prim = None
             
             if isinstance(geo, Rhino.Geometry.SubD):
-                usd_prim = Converter.ExportSubD(rh_obj, stage, root_path, i)
+                usd_prim = Converter.ExportSubD(rh_obj, stage, root_path, valid_name)
             elif isinstance(geo, Rhino.Geometry.Mesh):
-                usd_prim = Converter.ExportMesh(rh_obj, stage, root_path, i)
+                usd_prim = Converter.ExportMesh(rh_obj, stage, root_path, valid_name)
             elif isinstance(geo, Rhino.Geometry.PointCloud):
-                usd_prim = Converter.ExportPointCloud(rh_obj, stage, root_path, i)
+                usd_prim = Converter.ExportPointCloud(rh_obj, stage, root_path, valid_name)
             
             if usd_prim:
                 count += 1
@@ -425,19 +466,12 @@ class Execute:
         try:
             if Clipboard.Instance.ContainsText: 
                 clip_text = Clipboard.Instance.Text
-                if clip_text:
-                    clip_path = clip_text.strip().strip('"')
-                    if os.path.exists(clip_path):
-                        file_path = clip_path
+                clip_path = clip_text.strip().strip('"')
+                if os.path.exists(clip_path):
+                    file_path = clip_path
         except Exception:
             pass
 
-        # Fallback to Default Temp Path
-        if not file_path:
-            temp_path = Execute.GetTempPath()
-            if os.path.exists(temp_path):
-                file_path = temp_path
-                
         if not file_path:
             print("No valid USD file found in clipboard or desktop.")
             return
@@ -496,7 +530,14 @@ class Execute:
                         guid = Rhino.RhinoDoc.ActiveDoc.Objects.AddPointCloud(geometry)
                     
                     rh_obj = Rhino.RhinoDoc.ActiveDoc.Objects.FindId(guid)
+                    rh_obj = Rhino.RhinoDoc.ActiveDoc.Objects.FindId(guid)
                     if rh_obj:
+                        # Restore Name
+                        rh_obj.Attributes.Name = prim.GetName()
+                        # Restore User Attributes
+                        Converter.ImportUserAttr(prim, rh_obj)
+                        
+                        rh_obj.CommitChanges()
                         rh_obj.Select(True)
                     added_ids.append(guid)
                     
