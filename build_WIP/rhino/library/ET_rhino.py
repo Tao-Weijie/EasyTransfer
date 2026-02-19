@@ -194,6 +194,11 @@ class Converter:
             rh_normals = geo.GetNormals()
             normals = [Gf.Vec3f(n.X, n.Y, n.Z) for n in rh_normals]
             usd_points.CreateNormalsAttr(normals)
+        
+        # 4. Widths
+        if geo.ContainsPointValues:
+            rh_widths = geo.GetPointValues()
+            usd_points.CreateWidthsAttr(rh_widths)
             
         # Extent
         bbox = geo.GetBoundingBox(True)
@@ -337,43 +342,35 @@ class Converter:
         # Get Attributes (Normals, Colors)
         normals_attr = usd_points_geom.GetNormalsAttr().Get()
         colors_attr = usd_points_geom.GetDisplayColorAttr().Get()
-        
-        has_normals = normals_attr is not None and len(normals_attr) == len(rh_points)
-        has_colors = colors_attr is not None and len(colors_attr) == len(rh_points)
-        
-        if has_normals and has_colors:
-             for i in range(len(rh_points)):
-                 # Colors in USD are linear float 0-1, Rhino expects System.Drawing.Color
-                 c = colors_attr[i]
-                 # Clamp and convert
-                 r = int(max(0, min(1, c[0])) * 255)
-                 g = int(max(0, min(1, c[1])) * 255)
-                 b = int(max(0, min(1, c[2])) * 255)
-                 rh_color = Color.FromArgb(r, g, b)
-                 
-                 n = normals_attr[i]
-                 rh_normal = Rhino.Geometry.Vector3d(n[0], n[1], n[2])
-                 
-                 rh_pc.Add(rh_points[i], rh_normal, rh_color)
-                 
-        elif has_normals:
-             for i in range(len(rh_points)):
-                 n = normals_attr[i]
-                 rh_normal = Rhino.Geometry.Vector3d(n[0], n[1], n[2])
-                 rh_pc.Add(rh_points[i], rh_normal)
-                 
-        elif has_colors:
-             for i in range(len(rh_points)):
-                 c = colors_attr[i]
-                 r = int(max(0, min(1, c[0])) * 255)
-                 g = int(max(0, min(1, c[1])) * 255)
-                 b = int(max(0, min(1, c[2])) * 255)
-                 rh_color = Color.FromArgb(r, g, b)
-                 
-                 rh_pc.Add(rh_points[i], rh_color)
+        width_attr = usd_points_geom.GetWidthsAttr().Get()
+
+        rh_normals = None
+        if normals_attr and len(normals_attr) == len(rh_points):
+            rh_normals = [Rhino.Geometry.Vector3d(n[0], n[1], n[2]) for n in normals_attr]
+            
+        rh_colors = None
+        if colors_attr and len(colors_attr) == len(rh_points):
+            rh_colors = []
+            for c in colors_attr:
+                r = int(max(0, min(1, c[0])) * 255)
+                g = int(max(0, min(1, c[1])) * 255)
+                b = int(max(0, min(1, c[2])) * 255)
+                rh_colors.append(Color.FromArgb(r, g, b))
+
+        rh_widths = None
+        if width_attr and len(width_attr) == len(rh_points):
+            rh_widths = [w for w in width_attr]
+                
+        if rh_normals and rh_colors and rh_widths:
+            rh_pc.AddRange(rh_points, rh_normals, rh_colors, rh_widths)
+        elif rh_normals and rh_colors:
+            rh_pc.AddRange(rh_points, rh_normals, rh_colors)
+        elif rh_normals:
+            rh_pc.AddRange(rh_points, rh_normals)
+        elif rh_colors:
+            rh_pc.AddRange(rh_points, rh_colors)
         else:
-             # Fastest bulk add
-             rh_pc.AddRange(rh_points)
+            rh_pc.AddRange(rh_points)
              
         return rh_pc
 
