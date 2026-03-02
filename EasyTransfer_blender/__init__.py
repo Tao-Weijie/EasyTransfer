@@ -1,7 +1,7 @@
 bl_info = {
     "name": "EasyTransfer",
     "author": "Weijie Tao",
-    "version": (0, 1, 1),
+    "version": (0, 1, 3),
     "blender": (4, 5, 0),
     "location": "View3D > Rightclick Menu > EasyTransfer",
     "description": "Transfer geometry between different 3D software via USDA",
