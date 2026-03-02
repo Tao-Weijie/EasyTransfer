@@ -8,7 +8,7 @@
   "id": "9a4a4b5c-9028-48ca-adb0-5e8248f337a0",
   "identity": {
     "name": "EasyTransfer",
-    "version": "0.1.1",
+    "version": "0.1.3",
     "publisher": {
       "email": "taomou98@gmail.com",
       "name": "Weijie Tao"
@@ -128,6 +128,15 @@
           }
         }
       }
+    },
+    {
+      "id": "1dc48cec-62ce-4b46-89e3-44c9722689f9",
+      "language": {
+        "id": "*.*.python",
+        "version": "*.*.*"
+      },
+      "title": "ET_settings",
+      "uri": "ET_settings.py"
     }
   ],
   "libraries": [

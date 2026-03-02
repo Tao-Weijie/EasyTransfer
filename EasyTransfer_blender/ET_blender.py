@@ -3,7 +3,6 @@ import os
 import time
 
 def GetTempPath(context):
-    """Retrieves the USD file path from clipboard."""
     try:
         file_path = context.window_manager.clipboard.strip().strip('"')
         if os.path.exists(file_path) and os.path.isfile(file_path):
@@ -20,6 +19,20 @@ def SetTempPath():
     temp_name = prefs.temp_name if prefs.temp_name else "_temp.usd"
     return os.path.join(temp_dir, temp_name)
 
+def RenameColorAttributes():
+    selected_objs = bpy.context.selected_objects
+    
+    if not selected_objs:
+        return
+
+    for obj in selected_objs:
+        if obj.type == 'MESH':
+            mesh = obj.data
+            
+            if mesh.color_attributes:
+                first_color_attr = mesh.color_attributes[0]
+                first_color_attr.name = "displayColor"
+
 class EasyCopy(bpy.types.Operator):
     """Copy selected meshes to clipboard as USD"""
     bl_idname = "object.easy_copy_usd"
@@ -34,7 +47,10 @@ class EasyCopy(bpy.types.Operator):
             self.report({'WARNING'}, "No objects selected.")
             return {'CANCELLED'}
 
-        # 2. Export to USD
+        # 2. Rename Color Attributes to USD Standard
+        RenameColorAttributes()
+
+        # 3. Export to USD
         try:
             file_path = SetTempPath()
             start_time = time.time()
@@ -46,9 +62,9 @@ class EasyCopy(bpy.types.Operator):
                 merge_parent_xform=True,
                 author_blender_name=False,
                 evaluation_mode='VIEWPORT',
-                export_custom_properties=True, 
                 convert_world_material=False,
                 export_subdivision='BEST_MATCH',
+                export_custom_properties=True
             )
                 
             elapsed_time = time.time() - start_time
